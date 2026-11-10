@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ЦДЗ Лаунчер "CMK"</title>
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --bg-panel: #1e1e1e;
+            --bg-card: #252525;
+            --accent: #4caf50;
+            --accent-hover: #45a049;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --danger: #f44336;
+            --border: #333333;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        input {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        /* Оверлей полноэкранного режима */
+        #fullscreen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(10, 10, 10, 0.98);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+
+        #fullscreen-overlay.hidden {
+            display: none;
+        }
+
+        .fs-btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+
+        .fs-btn:hover {
+            background-color: var(--accent-hover);
+            transform: scale(1.05);
+        }
+
+        .fs-text {
+            color: var(--text-muted);
+            margin-top: 15px;
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        /* Экран авторизации / создания аккаунта */
+        #auth-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-dark);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            padding: 20px;
+        }
+
+        #auth-screen.hidden {
+            display: none;
+        }
+
+        .auth-card {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 30px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        }
+
+        .auth-title {
+            font-size: 1.6rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-align: center;
+            color: var(--accent);
+        }
+
+        .auth-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .auth-input {
+            width: 100%;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .auth-input:focus {
+            border-color: var(--accent);
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            width: 24px;
+            height: 24px;
+        }
+
+        .password-toggle:hover {
+            color: white;
+        }
+
+        .auth-btn {
+            width: 100%;
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.2s;
+        }
+
+        .auth-btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        /* Основной интерфейс Лаунчера */
+        #launcher-main {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            flex-direction: row;
+        }
+
+        /* Боковая панель (Десктоп) */
+        .sidebar {
+            width: 260px;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        .logo-text {
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            background: linear-gradient(45deg, #4caf50, #81c784);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-weight: 500;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .nav-item svg {
+            width: 22px;
+            height: 22px;
+            fill: currentColor;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background-color: rgba(76, 175, 80, 0.15);
+            color: var(--accent);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
+        }
+
+        .avatar-placeholder {
+            width: 36px;
+            height: 36px;
+            background-color: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .avatar-placeholder svg {
+            width: 20px;
+            height: 20px;
+            fill: white;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 160px;
+        }
+
+        /* Контентная зона */
+        .content-area {
+            flex-grow: 1;
+            height: 100%;
+            overflow-y: auto;
+            padding: 30px;
+            padding-bottom: 40px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .page-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        /* Сетка заданий ЦДЗ Minecraft */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .task-card {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 160px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .task-card:hover {
+            transform: translateY(-2px);
+            border-color: #444;
+        }
+
+        .task-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .task-icon {
+            background-color: var(--bg-card);
+            padding: 8px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+
+        .task-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
+        .task-info {
+            flex-grow: 1;
+            padding-right: 32px;
+        }
+
+        .task-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .task-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.3;
+        }
+
+        /* Окошко для галочки справа внизу */
+        .task-checkbox-wrapper {
+            position: absolute;
+            right: 16px;
+            bottom: 16px;
+            cursor: pointer;
+        }
+
+        .task-checkbox {
+            width: 28px;
+            height: 28px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            background-color: var(--bg-card);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .task-checkbox svg {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: white;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.2s;
+        }
+
+        /* Состояние Выполнено */
+        .task-card.completed {
+            border-color: var(--accent);
+        }
+
+        .task-card.completed .task-checkbox {
+            background-color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .task-card.completed .task-checkbox svg {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Настройки */
+        .settings-box {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+        }
+
+        .settings-item {
+            margin-bottom: 20px;
+        }
+
+        .settings-item label {
+            display: block;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .danger-btn {
+            background-color: transparent;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            padding: 10px 20px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .danger-btn:hover {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        /* Нижнее навигационное меню (Мобильные устройства) */
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background-color: var(--bg-panel);
+            border-top: 1px solid var(--border);
+            justify-content: space-around;
+            align-items: center;
+            z-index: 90;
+        }
+
+        .mobile-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            width: 60px;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .mobile-nav-item svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
+        .mobile-nav-item.active {
+            color: var(--accent);
+        }
+
+        /* Адаптивность для мобильных */
+        @media (max-width: 768px) {
+            #launcher-main {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .mobile-nav {
+                display: flex;
+            }
+
+            .content-area {
+                padding: 20px;
+                padding-bottom: 80px;
+                height: calc(100% - 60px);
+            }
+
+            .page-title {
+                font-size: 1.5rem;
+            }
+
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="fullscreen-overlay">
+        <button class="fs-btn" onclick="requestFullscreenMode()">
+            <svg style="width:24px;height:24px;fill:white" viewBox="0 0 24 24">
+                <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+            </svg>
+            На весь экран
+        </button>
+        <p class="fs-text">Для работы лаунчера CMK требуется полноэкранный режим</p>
+    </div>
+
+    <div id="auth-screen" class="hidden">
+        <div class="auth-card">
+            <div class="auth-title">CMK LAUNCHER</div>
+            <div class="auth-subtitle">Создание игрового профиля ЦДЗ</div>
+            
+            <div class="input-group">
+                <label for="username">Игровой никнейм</label>
+                <div class="input-wrapper">
+                    <input type="text" id="username" class="auth-input" placeholder="Введите ник..." autocomplete="off">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="password">Пароль защиты аккаунта</label>
+                <div class="input-wrapper">
+                    <input type="password" id="password" class="auth-input" placeholder="Придумайте пароль...">
+                    <div class="password-toggle" onclick="togglePasswordVisibility()">
+                        <svg id="eye-icon" viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor;">
+                            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <button class="auth-btn" onclick="handleRegister()">Войти в систему</button>
+        </div>
+    </div>
+
+    <div id="launcher-main">
+        <aside class="sidebar">
+            <div>
+                <div class="logo-area">
+                    <svg style="width:32px;height:32px;fill:var(--accent)" viewBox="0 0 24 24">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+                    </svg>
+                    <span class="logo-text">CMK Launcher</span>
+                </div>
+                
+                <nav class="nav-list">
+                    <div class="nav-item active" onclick="switchTab('tasks')">
+                        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                        Задания ЦДЗ
+                    </div>
+                    <div class="nav-item" onclick="switchTab('games')">
+                        <svg viewBox="0 0 24 24"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm3-3c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+                        Игры
+                    </div>
+                    <div class="nav-item" onclick="switchTab('settings')">
+                        <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                        Настройки
+                    </div>
+                </nav>
+            </div>
+
+            <div class="user-profile">
+                <div class="avatar-placeholder">
+                    <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                </div>
+                <span class="user-name" id="desktop-username">Игрок</span>
+            </div>
+        </aside>
+
+        <main class="content-area">
+            <section id="tab-tasks" class="tab-content active">
+                <h1 class="page-title">Minecraft: Домашние задания ЦДЗ</h1>
+                <div class="cards-grid" id="tasks-container"></div>
+            </section>
+
+            <section id="tab-games" class="tab-content">
+                <h1 class="page-title">Игротека</h1>
+                <p style="color:var(--text-muted)">Список доступных игровых клиентов и версий.</p>
+                <div class="cards-grid" style="margin-top:20px;">
+                    <div class="task-card" style="min-height:120px; position:relative;">
+                        <div class="task-header">
+                            <div class="task-icon">
+                                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+                            </div>
+                            <div class="task-info">
+                                <div class="task-name">Minecraft Vanilla 1.20</div>
+                                <div class="task-desc">Чистая официальная версия для выполнения лабораторных работ.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tab-settings" class="tab-content">
+                <h1 class="page-title">Настройки лаунчера</h1>
+                <div class="settings-box">
+                    <div class="settings-item">
+                        <label>Сброс параметров и игрового прогресса</label>
+                        <button class="danger-btn" onclick="triggerProgressReset()">Очистить все данные LocalStorage</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <nav class="mobile-nav">
+            <div class="mobile-nav-item active" onclick="switchTab('tasks')">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            </div>
+            <div class="mobile-nav-item" onclick="switchTab('games')">
+                <svg viewBox="0 0 24 24"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm3-3c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+            </div>
+            <div class="mobile-nav-item" onclick="switchTab('settings')">
+                <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+            </div>
+        </nav>
+    </div>
+
+    <script>
+        const mcTasks = [
+            { id: "task_1", name: "Основы Выживания", desc: "Соберите 16 единиц дубовой древесины и скрафтите свой первый верстак." },
+            { id: "task_2", name: "Инженерия Redstone", desc: "Спроектируйте автоматическую ферму тростника с использованием поршней и наблюдателей." },
+            { id: "task_3", name: "Алхимия и Зелья", desc: "Сварите зелье стремительности II уровня, используя адский нарост и сахар." },
+            { id: "task_4", name: "Архитектура Базы", desc: "Возведите жилую постройку в средневековом стиле площадью не менее 10x10 блоков." }
+        ];
+
+        document.addEventListener('fullscreenchange', handleFullscreenToggle);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenToggle);
+
+        function handleFullscreenToggle() {
+            const isFull = document.fullscreenElement || document.webkitFullscreenElement;
+            const overlay = document.getElementById('fullscreen-overlay');
+            if (isFull) {
+                overlay.classList.add('hidden');
+                checkAuthStatus();
+            } else {
+                overlay.classList.remove('hidden');
+            }
+        }
+
+        function requestFullscreenMode() {
+            const docElm = document.documentElement;
+            if (docElm.requestFullscreen) docElm.requestFullscreen();
+            else if (docElm.webkitRequestFullscreen) docElm.webkitRequestFullscreen();
+        }
+
+        function togglePasswordVisibility() {
+            const passInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eye-icon');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                eyeIcon.style.fill = 'var(--accent)';
+            } else {
+                passInput.type = 'password';
+                eyeIcon.style.fill = 'currentColor';
+            }
+        }
+
+        function checkAuthStatus() {
+            const savedUser = localStorage.getItem('cmk_username');
+            const authScreen = document.getElementById('auth-screen');
+            if (savedUser) {
+                authScreen.classList.add('hidden');
+                document.getElementById('desktop-username').innerText = savedUser;
+                renderTasks();
+            } else {
+                authScreen.classList.remove('hidden');
+            }
+        }
+
+        function handleRegister() {
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
+            if (!user || !pass) {
+                alert("Пожалуйста, заполните логин и пароль.");
+                return;
+            }
+            localStorage.setItem('cmk_username', user);
+            localStorage.setItem('cmk_password', pass);
+            checkAuthStatus();
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            const indexMap = { 'tasks': 0, 'games': 1, 'settings': 2 };
+            const idx = indexMap[tabName];
+            document.querySelectorAll('.nav-list .nav-item')[idx].classList.add('active');
+            document.querySelectorAll('.mobile-nav .mobile-nav-item')[idx].classList.add('active');
+        }
+
+        function renderTasks() {
+            const container = document.getElementById('tasks-container');
+            container.innerHTML = '';
+
+            mcTasks.forEach(task => {
+                const isCompleted = localStorage.getItem(`cmk_${task.id}`) === 'true';
+                const card = document.createElement('div');
+                card.className = `task-card ${isCompleted ? 'completed' : ''}`;
+                card.id = `card_${task.id}`;
+
+                card.innerHTML = `
+                    <div class="task-header">
+                        <div class="task-icon">
+                            <svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM13 16h-2v2h2v-2zm0-6h-2v4h2v-4z"/></svg>
+                        </div>
+                        <div class="task-info">
+                            <div class="task-name">${task.name}</div>
+                            <div class="task-desc">${task.desc}</div>
+                        </div>
+                    </div>
+                    <div class="task-checkbox-wrapper" onclick="toggleTaskStatus('${task.id}')">
+                        <div class="task-checkbox">
+                            <svg viewBox="0 0 24 24">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function toggleTaskStatus(taskId) {
+            const currentStatus = localStorage.getItem(`cmk_${taskId}`) === 'true';
+            const newStatus = !currentStatus;
+            localStorage.setItem(`cmk_${taskId}`, newStatus);
+            const card = document.getElementById(`card_${taskId}`);
+            if (newStatus) card.classList.add('completed');
+            else card.classList.remove('completed');
+        }
+
+        function triggerProgressReset() {
+            const firstConfirm = confirm("Вы уверены, что хотите полностью стереть свой прогресс заданий и аккаунт?");
+            if (!firstConfirm) return;
+
+            const correctPassword = localStorage.getItem('cmk_password') || "";
+            const userPasswordInput = prompt("Внимание! Для подтверждения удаления введите пароль от вашего аккаунта:");
+            if (userPasswordInput === null) return;
+
+            if (userPasswordInput === correctPassword) {
+                localStorage.clear();
+                alert("Все данные успешно удалены. Страница будет перезагружена.");
+                window.location.reload();
+            } else {
+                alert("Ошибка! Неверный пароль. Доступ к сбросу прогресса заблокирован.");
+            }
+        }
+    </script>
+</body>
+</html>
