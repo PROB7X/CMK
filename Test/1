@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ЦДЗ: Основы выживания</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #f5f6fa;
+            color: #2f3640;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Экран блокировки (На весь экран) */
+        #fullscreen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(47, 54, 64, 0.98);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #fullscreen-overlay h2 {
+            color: #ffffff;
+            font-weight: 500;
+            margin-bottom: 25px;
+            max-width: 600px;
+            line-height: 1.4;
+        }
+
+        .btn-modern {
+            background: #00a8ff;
+            color: #fff;
+            border: none;
+            padding: 14px 28px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.1s ease;
+            box-shadow: 0 4px 6px rgba(0, 168, 255, 0.2);
+        }
+
+        .btn-modern:hover {
+            background: #0097e6;
+        }
+
+        .btn-modern:active {
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background: #718093;
+            box-shadow: 0 4px 6px rgba(113, 128, 147, 0.2);
+            margin-top: 15px;
+        }
+
+        .btn-secondary:hover {
+            background: #636e72;
+        }
+
+        /* Контейнер теста */
+        .quiz-container {
+            background: #ffffff;
+            padding: 40px;
+            max-width: 600px;
+            width: 90%;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            color: #2f3640;
+            font-size: 24px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .progress {
+            margin-bottom: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #9c88ff;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .question-text {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .answers-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .answer-item {
+            background: #f8f9fa;
+            border: 2px solid #edeff1;
+            padding: 16px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .answer-item:hover {
+            background: #f1f2f6;
+            border-color: #dcdde1;
+        }
+
+        /* Экран результатов */
+        .result-screen {
+            text-align: center;
+        }
+
+        .result-screen h2 {
+            font-size: 26px;
+            margin-bottom: 15px;
+        }
+
+        .score-text {
+            font-size: 20px;
+            margin-bottom: 30px;
+            color: #353b48;
+        }
+
+        .review-list {
+            text-align: left;
+            margin: 30px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 10px;
+            border-top: 1px solid #edeff1;
+            border-bottom: 1px solid #edeff1;
+            padding-top: 15px;
+            padding-bottom: 15px;
+        }
+
+        .review-item {
+            margin-bottom: 18px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #edeff1;
+        }
+
+        .review-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .review-q {
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 15px;
+        }
+
+        .review-status {
+            font-size: 14px;
+            font-weight: bold;
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+        }
+
+        .status-correct {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-wrong {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .review-ans {
+            font-size: 14px;
+            color: #718093;
+        }
+
+        .buttons-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .hide {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Окно требования полноэкранного режима -->
+    <div id="fullscreen-overlay">
+        <h2>Для прохождения теста необходимо развернуть окно на весь экран</h2>
+        <button class="btn-modern" onclick="enterFullscreen()">На весь экран</button>
+    </div>
+
+    <!-- Основной контент теста -->
+    <div class="quiz-container">
+        <h1 id="quiz-title">Основы выживания</h1>
+        
+        <div id="quiz-game">
+            <div class="progress" id="progress-text">Вопрос 1 из 10</div>
+            <div class="question-text" id="question-text">Текст вопроса</div>
+            <div class="answers-list" id="answers-block"></div>
+        </div>
+
+        <div id="quiz-result" class="result-screen hide">
+            <h2>Тест завершен</h2>
+            <div class="score-text" id="result-text"></div>
+            
+            <!-- Детализация ответов (правильно/неправильно) -->
+            <div class="review-list" id="review-block"></div>
+
+            <div class="buttons-group">
+                <button class="btn-modern" onclick="restartQuiz()">Пройти заново</button>
+                <button class="btn-modern btn-secondary" onclick="exitToMain()">Выйти на главную</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const questionsData = [
+            {
+                q: "Какое дерево нужно добыть в первую очередь для создания верстака?",
+                a: [
+                    { text: "Любое доступное дерево", correct: true },
+                    { text: "Только дуб", correct: false },
+                    { text: "Только березу", correct: false },
+                    { text: "Тропическое дерево", correct: false }
+                ]
+            },
+            {
+                q: "Каким инструментом эффективнее всего добывать камень?",
+                a: [
+                    { text: "Киркой", correct: true },
+                    { text: "Кирпичом", correct: false },
+                    { text: "Лопатой", correct: false },
+                    { text: "Руками", correct: false }
+                ]
+            },
+            {
+                q: "Что произойдет, если персонаж долго не будет есть?",
+                a: [
+                    { text: "Начнет теряться здоровье (на высокой/нормальной сложности)", correct: true },
+                    { text: "Персонаж сразу погибнет", correct: false },
+                    { text: "Он станет быстрее бегать", correct: false },
+                    { text: "Ничего не произойдет", correct: false }
+                ]
+            },
+            {
+                q: "Из чего крафтится первая кровать для пропуска ночи?",
+                a: [
+                    { text: "3 доски + 3 шерсти", correct: true },
+                    { text: "3 камня + 3 шерсти", correct: false },
+                    { text: "6 досок", correct: false },
+                    { text: "Шерсть + железо", correct: false }
+                ]
+            },
+            {
+                q: "Какой враждебный моб бесшумно подходит и взрывается?",
+                a: [
+                    { text: "Крипер", correct: true },
+                    { text: "Зомби", correct: false },
+                    { text: "Скелет", correct: false },
+                    { text: "Эндермен", correct: false }
+                ]
+            },
+            {
+                q: "Какая руда необходима для выплавки железных слитков?",
+                a: [
+                    { text: "Железная руда", correct: true },
+                    { text: "Угольная руда", correct: false },
+                    { text: "Редстоун", correct: false },
+                    { text: "Медная руда", correct: false }
+                ]
+            },
+            {
+                q: "Где безопаснее всего провести первую ночь, если нет кровати?",
+                a: [
+                    { text: "Закопаться в землю или построить коробку из земли", correct: true },
+                    { text: "Гулять по лесу", correct: false },
+                    { text: "Плыть по океану без лодки", correct: false },
+                    { text: "Стоять рядом с крипером", correct: false }
+                ]
+            },
+            {
+                q: "Какое оружие лучше всего использовать против скелетов-лучников на дистанции?",
+                a: [
+                    { text: "Лук или арбалет", correct: true },
+                    { text: "Каменный меч", correct: false },
+                    { text: "Деревянный топор", correct: false },
+                    { text: "Зажигалку", correct: false }
+                ]
+            },
+            {
+                q: "Что нужно использовать, чтобы осветить шахту?",
+                a: [
+                    { text: "Факел", correct: true },
+                    { text: "Гнилую плоть", correct: false },
+                    { text: "Светокамень", correct: false },
+                    { text: "Ведро лавы", correct: false }
+                ]
+            },
+            {
+                q: "Можно ли добыть алмазы деревянной киркой?",
+                a: [
+                    { text: "Нет, руда сломается и алмаз не выпадет", correct: true },
+                    { text: "Да, но это займет много времени", correct: false },
+                    { text: "Да, если кирка зачарована", correct: false },
+                    { text: "Можно, если добывать под водой", correct: false }
+                ]
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let userHistory = []; // Хранит историю ответов пользователя
+
+        const overlay = document.getElementById('fullscreen-overlay');
+        const progressText = document.getElementById('progress-text');
+        const questionText = document.getElementById('question-text');
+        const answersBlock = document.getElementById('answers-block');
+        const quizGame = document.getElementById('quiz-game');
+        const quizResult = document.getElementById('quiz-result');
+        const resultText = document.getElementById('result-text');
+        const reviewBlock = document.getElementById('review-block');
+        const quizTitle = document.getElementById('quiz-title');
+
+        // --- ПОЛНОЭКРАННЫЙ РЕЖИМА ---
+        function enterFullscreen() {
+            const docElm = document.documentElement;
+            if (docElm.requestFullscreen) { docElm.requestFullscreen(); }
+            else if (docElm.webkitRequestFullscreen) { docElm.webkitRequestFullscreen(); }
+            else if (docElm.mozRequestFullScreen) { docElm.mozRequestFullScreen(); }
+            else if (docElm.msRequestFullscreen) { docElm.msRequestFullscreen(); }
+        }
+
+        function checkFullscreenChange() {
+            if (!document.fullscreenElement && 
+                !document.webkitFullscreenElement && 
+                !document.mozFullScreenElement && 
+                !document.msFullscreenElement) {
+                overlay.style.display = 'flex';
+            } else {
+                overlay.style.display = 'none';
+            }
+        }
+
+        document.addEventListener('fullscreenchange', checkFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', checkFullscreenChange);
+        document.addEventListener('mozfullscreenchange', checkFullscreenChange);
+        document.addEventListener('MSFullscreenChange', checkFullscreenChange);
+
+        // --- ЛОГИКА ТЕСТА ---
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function loadQuestion() {
+            if (currentQuestionIndex >= questionsData.length) {
+                showResults();
+                return;
+            }
+
+            const currentQuestion = questionsData[currentQuestionIndex];
+            progressText.innerText = `Вопрос ${currentQuestionIndex + 1} из ${questionsData.length}`;
+            questionText.innerText = currentQuestion.q;
+            answersBlock.innerHTML = '';
+
+            const shuffledAnswers = shuffle([...currentQuestion.a]);
+
+            shuffledAnswers.forEach(answer => {
+                const div = document.createElement('div');
+                div.className = 'answer-item';
+                div.innerText = answer.text;
+                div.onclick = () => selectAnswer(currentQuestion.q, answer.text, answer.correct, currentQuestion.a.find(item => item.correct).text);
+                answersBlock.appendChild(div);
+            });
+        }
+
+        function selectAnswer(question, selectedText, isCorrect, correctText) {
+            if (isCorrect) {
+                score++;
+            }
+            // Запоминаем для вывода итогов
+            userHistory.push({
+                question: question,
+                selected: selectedText,
+                correct: isCorrect,
+                correctAnswerText: correctText
+            });
+
+            currentQuestionIndex++;
+            loadQuestion();
+        }
+
+        function showResults() {
+            quizGame.classList.add('hide');
+            quizTitle.classList.add('hide');
+            quizResult.classList.remove('hide');
+            
+            resultText.innerText = `Ваш результат: ${score} из ${questionsData.length} правильных ответов`;
+            
+            // Заполнение блока "правильно/неправильно"
+            reviewBlock.innerHTML = '';
+            userHistory.forEach((item, index) => {
+                const reviewItem = document.createElement('div');
+                reviewItem.className = 'review-item';
+                
+                const qTitle = document.createElement('div');
+                qTitle.className = 'review-q';
+                qTitle.innerText = `${index + 1}. ${item.question}`;
+                
+                const status = document.createElement('div');
+                status.className = `review-status ${item.correct ? 'status-correct' : 'status-wrong'}`;
+                status.innerText = item.correct ? 'Правильно' : 'Неправильно';
+                
+                const ansDetails = document.createElement('div');
+                ansDetails.className = 'review-ans';
+                if (item.correct) {
+                    ansDetails.innerText = `Ваш ответ: ${item.selected}`;
+                } else {
+                    ansDetails.innerHTML = `Ваш ответ: <span style="text-decoration: line-through;">${item.selected}</span><br>Правильный ответ: <strong>${item.correctAnswerText}</strong>`;
+                }
+                
+                reviewItem.appendChild(qTitle);
+                reviewItem.appendChild(status);
+                reviewItem.appendChild(ansDetails);
+                reviewBlock.appendChild(reviewItem);
+            });
+        }
+
+        function restartQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            userHistory = [];
+            quizResult.classList.add('hide');
+            quizGame.classList.remove('hide');
+            quizTitle.classList.remove('hide');
+            shuffle(questionsData);
+            loadQuestion();
+        }
+
+        function exitToMain() {
+            window.location.href = "https://prob7x.GitHub.io/CMK";
+        }
+
+        // Старт
+        shuffle(questionsData);
+        loadQuestion();
+    </script>
+</body>
+</html>
